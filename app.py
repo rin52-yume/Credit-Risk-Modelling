@@ -46,20 +46,16 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ── Load assets ───────────────────────────────────────────────────────────────
-# Safe handling of __file__ for different environments
 try:
     BASE = os.path.dirname(os.path.abspath(__file__))
 except NameError:
     BASE = os.getcwd()
 
 ASSETS = os.path.join(BASE, 'assets')
-
-# Create assets folder if it doesn't exist
 os.makedirs(ASSETS, exist_ok=True)
 
 @st.cache_resource
 def load_models():
-    """Load all trained models from assets folder"""
     method_names = ['SMOTE', 'ADASYN', 'Borderline-SMOTE', 'Class Weights', 'Threshold Moving']
     mdls = {}
     for name in method_names:
@@ -68,31 +64,21 @@ def load_models():
         try:
             with open(path, 'rb') as f:
                 mdls[name] = pickle.load(f)
-        except FileNotFoundError:
-            st.warning(f"⚠️ Model file not found: {path}")
-            mdls[name] = None
-        except Exception as e:
-            st.error(f"Error loading {name}: {str(e)}")
+        except:
             mdls[name] = None
     return mdls
 
 @st.cache_resource
 def load_scaler():
-    """Load the scaler"""
     path = os.path.join(ASSETS, 'scaler.pkl')
     try:
         with open(path, 'rb') as f:
             return pickle.load(f)
-    except FileNotFoundError:
-        st.warning("⚠️ Scaler file not found. Using default scaler.")
-        return None
-    except Exception as e:
-        st.error(f"Error loading scaler: {str(e)}")
+    except:
         return None
 
 @st.cache_data
 def load_meta():
-    """Load all metadata files"""
     try:
         with open(os.path.join(ASSETS, 'feature_names.json'), 'r') as f:
             fn = json.load(f)
@@ -101,12 +87,10 @@ def load_meta():
         with open(os.path.join(ASSETS, 'stats.json'), 'r') as f:
             st_data = json.load(f)
         results = pd.read_csv(os.path.join(ASSETS, 'results.csv'))
-        sra = pd.read_csv(os.path.join(ASSETS, 'sra_results.csv'))
         X_exp = pd.read_csv(os.path.join(ASSETS, 'X_explain.csv'))
-        return fn, th, st_data, results, sra, X_exp
-    except FileNotFoundError as e:
-        st.error(f"❌ Required data file not found: {e.filename}")
-        # Return default values to prevent crashing
+        return fn, th, st_data, results, X_exp
+    except Exception as e:
+        st.warning(f"Using default data: {str(e)}")
         return (
             ['LIMIT_BAL', 'SEX', 'EDUCATION', 'MARRIAGE', 'AGE', 'PAY_0', 'PAY_2', 'PAY_3', 
              'PAY_4', 'PAY_5', 'PAY_6', 'BILL_AMT1', 'BILL_AMT2', 'BILL_AMT3', 'BILL_AMT4', 
@@ -116,14 +100,11 @@ def load_meta():
             {'SMOTE': 0.5, 'ADASYN': 0.5, 'Borderline-SMOTE': 0.5, 
              'Class Weights': 0.5, 'Threshold Moving': 0.5},
             {"n_samples": 30000, "default_rate": 22.0, "n_features": 28, 
-             "best_sra_method": "SMOTE", "best_f1_method": "SMOTE", "trade_off": True},
+             "best_sra_method": "SMOTE", "best_f1_method": "Threshold Moving", "trade_off": True},
             pd.DataFrame({'method': ['SMOTE', 'ADASYN', 'Borderline-SMOTE', 'Class Weights', 'Threshold Moving'],
                          'roc_auc': [0.78, 0.77, 0.76, 0.75, 0.74],
                          'f1': [0.65, 0.64, 0.63, 0.62, 0.61],
                          'threshold': [0.5, 0.5, 0.5, 0.5, 0.5]}),
-            pd.DataFrame({'method': ['SMOTE', 'ADASYN', 'Borderline-SMOTE', 'Class Weights', 'Threshold Moving'],
-                         'sra': [0.98, 0.97, 0.96, 0.95, 0.94],
-                         'sra_std': [0.01, 0.02, 0.01, 0.02, 0.03]}),
             pd.DataFrame(np.random.randn(100, 28), columns=['LIMIT_BAL', 'SEX', 'EDUCATION', 'MARRIAGE', 'AGE', 
                                                             'PAY_0', 'PAY_2', 'PAY_3', 'PAY_4', 'PAY_5', 'PAY_6', 
                                                             'BILL_AMT1', 'BILL_AMT2', 'BILL_AMT3', 'BILL_AMT4', 
@@ -132,24 +113,17 @@ def load_meta():
                                                             'AVG_PAY_DELAY', 'TOTAL_BILL', 'TOTAL_PAID', 
                                                             'UTIL_RATIO', 'PAY_RATIO'])
         )
-    except Exception as e:
-        st.error(f"❌ Error loading data: {str(e)}")
-        return [], {}, {}, pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
-# Load all assets
 models = load_models()
 scaler = load_scaler()
-feature_names, thresholds, stats, results_df, sra_df, X_explain = load_meta()
+feature_names, thresholds, stats, results_df, X_explain = load_meta()
 
-# Check if data loaded properly
 if not feature_names:
-    st.error("❌ Failed to load required data. Please check the assets folder.")
+    st.error("Failed to load required data.")
     st.stop()
 
-# Filter out None models for selection
 AVAILABLE_MODELS = [m for m in list(models.keys()) if models[m] is not None]
 if not AVAILABLE_MODELS:
-    st.warning("⚠️ No models loaded. Using default model list for demonstration.")
     AVAILABLE_MODELS = ['SMOTE', 'ADASYN', 'Borderline-SMOTE', 'Class Weights', 'Threshold Moving']
 
 METHOD_COLORS = {
@@ -166,40 +140,38 @@ with st.sidebar:
         st.image("https://img.icons8.com/fluency/96/bank-building.png", width=70)
     except:
         st.markdown("🏦")
-    st.markdown("## 🏦 Credit Risk XAI")
+    st.markdown("## Credit Risk XAI")
     st.markdown("**Explainable AI Dashboard**")
     st.divider()
-    st.markdown(f"📊 **Dataset:** Taiwan Default Credit Card")
+    st.markdown("**Dataset:** Taiwan Default Credit Card")
     if stats and 'n_samples' in stats:
-        st.markdown(f"👥 **Clients:** {stats['n_samples']:,}")
-        st.markdown(f"🎯 **Default Rate:** {stats['default_rate']:.1f}%")
-        st.markdown(f"🔢 **Features:** {stats['n_features']}")
+        st.markdown(f"Clients: {stats['n_samples']:,}")
+        st.markdown(f"Default Rate: {stats['default_rate']:.1f}%")
+        st.markdown(f"Features: {stats['n_features']}")
     else:
-        st.markdown("👥 **Clients:** Data not available")
+        st.markdown("Data not available")
     st.divider()
     st.markdown("**Key Finding:**")
     if stats and 'best_sra_method' in stats:
-        st.success(f"✅ Best SRA: **{stats['best_sra_method']}**")
-        st.info(f"📈 Best F1: **{stats['best_f1_method']}**")
+        st.success(f"Best SRA: {stats['best_sra_method']}")
+        st.info(f"Best F1: {stats['best_f1_method']}")
         if stats.get('trade_off', False):
-            st.warning("⚖️ **Trade-off confirmed!** Best prediction ≠ best stability")
-    else:
-        st.info("Key findings will appear after loading data")
+            st.warning("Trade-off confirmed!")
     st.divider()
     st.caption("M.A. Economics · Delhi School of Economics · Class of 2027")
 
 # ── Main title ────────────────────────────────────────────────────────────────
-st.markdown("# 🏦 Explainable AI Credit Risk Assessment System")
-st.markdown("**Research:** Which imbalance correction method produces the most stable SHAP feature rankings? (SRA metric)")
+st.markdown("# Explainable AI Credit Risk Assessment System")
+st.markdown("**Research:** Which imbalance correction method produces the most stable SHAP feature rankings?")
 st.divider()
 
 # ── Tabs ──────────────────────────────────────────────────────────────────────
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
-    "📊 Overview & EDA",
-    "🔮 Predict Default",
-    "🧠 SHAP Explanations",
-    "⚖️ Compare Methods",
-    "🔬 SRA Research Results"
+    "Overview & EDA",
+    "Predict Default",
+    "SHAP Explanations",
+    "Compare Methods",
+    "SRA Research Results"
 ])
 
 # ════════════════════════════════════════════════════════════════════════════════
@@ -222,38 +194,31 @@ with tab1:
                     <div class="metric-label">{label}</div>
                     <div class="metric-value">{val}</div>
                 </div>""", unsafe_allow_html=True)
-    else:
-        for col, label in zip([c1, c2, c3, c4], ["Total Clients", "Default Cases", "No Default", "Default Rate"]):
-            with col:
-                st.markdown(f"""<div class="metric-card">
-                    <div class="metric-label">{label}</div>
-                    <div class="metric-value">N/A</div>
-                </div>""", unsafe_allow_html=True)
 
     st.markdown("---")
     r1c1, r1c2 = st.columns(2)
     with r1c1:
         st.markdown("#### Class Distribution")
-        img_path = os.path.join(ASSETS, '01_class_dist.png')
+        img_path = os.path.join(ASSETS, '01_class_distribution.png')
         if os.path.exists(img_path):
             st.image(img_path, use_container_width=True)
         else:
-            st.info("📊 Visualization not available. Please add '01_class_dist.png' to the assets folder.")
+            st.info("Visualization not available.")
 
     with r1c2:
-        st.markdown("#### Default Rate by Payment Status (PAY_0)")
-        img_path = os.path.join(ASSETS, '02_pay0_default.png')
+        st.markdown("#### Default Rate by Payment Status")
+        img_path = os.path.join(ASSETS, '02_repayment_vs_default.png')
         if os.path.exists(img_path):
             st.image(img_path, use_container_width=True)
         else:
-            st.info("📊 Visualization not available. Please add '02_pay0_default.png' to the assets folder.")
+            st.info("Visualization not available.")
 
     st.markdown("#### Feature Correlation Matrix")
-    img_path = os.path.join(ASSETS, '03_correlation.png')
+    img_path = os.path.join(ASSETS, '04_correlation_matrix.png')
     if os.path.exists(img_path):
         st.image(img_path, use_container_width=True)
     else:
-        st.info("📊 Visualization not available. Please add '03_correlation.png' to the assets folder.")
+        st.info("Visualization not available.")
 
     st.markdown("---")
     st.markdown("#### Dataset Variables")
@@ -287,14 +252,13 @@ with tab1:
 # TAB 2 — Predict Default
 # ════════════════════════════════════════════════════════════════════════════════
 with tab2:
-    st.subheader("🔮 Credit Default Prediction")
+    st.subheader("Credit Default Prediction")
     st.markdown("Enter a client's details below to predict their probability of default.")
 
     selected_method = st.selectbox(
         "Select Imbalance Correction Model:",
         AVAILABLE_MODELS,
-        index=0 if AVAILABLE_MODELS else 0,
-        help="Choose which trained model to use for prediction"
+        index=0 if AVAILABLE_MODELS else 0
     )
 
     st.markdown("---")
@@ -303,9 +267,8 @@ with tab2:
     col_a, col_b, col_c = st.columns(3)
 
     with col_a:
-        st.markdown("**👤 Demographics**")
-        limit_bal = st.slider("Credit Limit (NT$)", 10000, 1000000, 50000, step=10000,
-                              help="Maximum credit amount approved")
+        st.markdown("**Demographics**")
+        limit_bal = st.slider("Credit Limit (NT$)", 10000, 1000000, 50000, step=10000)
         age = st.slider("Age", 18, 80, 35)
         sex = st.selectbox("Sex", [1, 2], format_func=lambda x: "Male" if x == 1 else "Female")
         education = st.selectbox("Education",
@@ -317,7 +280,7 @@ with tab2:
                                 format_func=lambda x: {1: "Married", 2: "Single", 3: "Others"}[x])
 
     with col_b:
-        st.markdown("**💳 Payment History (Recent → Oldest)**")
+        st.markdown("**Payment History (Recent → Oldest)**")
         pay0 = st.selectbox("PAY_0 (Sep)", list(range(-2, 10)),
                             format_func=lambda x: f"{x} ({'on-time' if x <= 0 else f'{x}mo late'})", index=2)
         pay2 = st.selectbox("PAY_2 (Aug)", list(range(-2, 10)),
@@ -332,7 +295,7 @@ with tab2:
                             format_func=lambda x: f"{x} ({'on-time' if x <= 0 else f'{x}mo late'})", index=2)
 
     with col_c:
-        st.markdown("**📄 Bill & Payment Amounts (NT$)**")
+        st.markdown("**Bill & Payment Amounts (NT$)**")
         bill1 = st.number_input("Bill Sep", 0, 500000, 20000, step=1000)
         bill2 = st.number_input("Bill Aug", 0, 500000, 18000, step=1000)
         bill3 = st.number_input("Bill Jul", 0, 500000, 17000, step=1000)
@@ -341,21 +304,18 @@ with tab2:
         pay_a3 = st.number_input("Paid Jul", 0, 200000, 1500, step=500)
 
     st.markdown("---")
-    predict_btn = st.button("🔍 Predict Default Probability", type="primary", use_container_width=True)
+    predict_btn = st.button("Predict Default Probability", type="primary", use_container_width=True)
 
-    # Initialize variables
     proba = 0.0
     thresh = 0.5
 
     if predict_btn:
-        # Check if model and scaler are available
         if models.get(selected_method) is None:
-            st.error("❌ Model not loaded. Please check the assets folder.")
+            st.error("Model not loaded.")
         elif scaler is None:
-            st.error("❌ Scaler not loaded. Please check the assets folder.")
+            st.error("Scaler not loaded.")
         else:
             try:
-                # Build full feature vector
                 bill4 = bill3
                 bill5 = bill2
                 bill6 = bill1
@@ -382,12 +342,10 @@ with tab2:
                 raw['UTIL_RATIO'] = bill1 / (limit_bal + 1)
                 raw['PAY_RATIO'] = total_paid / (total_bill + 1)
 
-                # Ensure all features are present
                 row_df = pd.DataFrame([raw])
-                # Only use features that exist in the DataFrame
                 available_features = [f for f in feature_names if f in row_df.columns]
                 if not available_features:
-                    st.error("❌ No matching features found. Please check feature names.")
+                    st.error("No matching features found.")
                 else:
                     row_df = row_df[available_features]
                     row_sc = pd.DataFrame(scaler.transform(row_df), columns=available_features)
@@ -417,13 +375,12 @@ with tab2:
                         </div>""", unsafe_allow_html=True)
 
                     if proba >= 0.65:
-                        st.markdown(f'<div class="risk-high">🔴 <b>HIGH RISK</b> — Probability: {proba * 100:.1f}%. Recommend rejecting credit application or requesting additional collateral.</div>', unsafe_allow_html=True)
+                        st.markdown(f'<div class="risk-high">HIGH RISK — Probability: {proba * 100:.1f}%. Recommend rejecting credit application.</div>', unsafe_allow_html=True)
                     elif proba >= 0.35:
-                        st.markdown(f'<div class="risk-medium">🟡 <b>MEDIUM RISK</b> — Probability: {proba * 100:.1f}%. Further review recommended before approving.</div>', unsafe_allow_html=True)
+                        st.markdown(f'<div class="risk-medium">MEDIUM RISK — Probability: {proba * 100:.1f}%. Further review recommended.</div>', unsafe_allow_html=True)
                     else:
-                        st.markdown(f'<div class="risk-low">🟢 <b>LOW RISK</b> — Probability: {proba * 100:.1f}%. Credit application looks acceptable.</div>', unsafe_allow_html=True)
+                        st.markdown(f'<div class="risk-low">LOW RISK — Probability: {proba * 100:.1f}%. Credit application looks acceptable.</div>', unsafe_allow_html=True)
 
-                    # SHAP for this prediction
                     st.markdown("#### Why this prediction? (SHAP)")
                     with st.spinner("Computing SHAP explanation..."):
                         try:
@@ -445,12 +402,11 @@ with tab2:
                                 st.pyplot(fig2, use_container_width=True)
                                 plt.close()
                         except Exception as e:
-                            st.warning(f"⚠️ Could not compute SHAP explanation: {str(e)}")
+                            st.warning(f"Could not compute SHAP explanation: {str(e)}")
 
             except Exception as e:
-                st.error(f"❌ Error during prediction: {str(e)}")
+                st.error(f"Error during prediction: {str(e)}")
 
-    # Gauge chart (always shown, with current proba value)
     fig, ax = plt.subplots(figsize=(5, 2.5))
     ax.barh(['Risk'], [1], color='#E5E7EB', height=0.4)
     bar_color = '#DC2626' if proba > 0.65 else ('#D97706' if proba > 0.35 else '#059669')
@@ -470,7 +426,7 @@ with tab2:
 # TAB 3 — SHAP Explanations
 # ════════════════════════════════════════════════════════════════════════════════
 with tab3:
-    st.subheader("🧠 SHAP Global Explainability")
+    st.subheader("SHAP Global Explainability")
     st.markdown("SHAP (SHapley Additive exPlanations) shows which features drive default predictions.")
 
     shap_method = st.selectbox("Select model to explain:", AVAILABLE_MODELS, key='shap_sel')
@@ -478,20 +434,20 @@ with tab3:
     c1, c2 = st.columns(2)
     with c1:
         st.markdown("#### SMOTE Model — SHAP Summary")
-        img_path = os.path.join(ASSETS, '05_shap_smote.png')
+        img_path = os.path.join(ASSETS, '06_shap_summary_smote.png')
         if os.path.exists(img_path):
             st.image(img_path, use_container_width=True)
         else:
-            st.info("📊 Visualization not available. Please add '05_shap_smote.png' to the assets folder.")
+            st.info("Visualization not available.")
         st.caption("Each dot = one client. Red = high feature value. Position on x-axis = impact on default prediction.")
 
     with c2:
         st.markdown("#### Class Weights Model — SHAP Summary")
-        img_path = os.path.join(ASSETS, '06_shap_classweights.png')
+        img_path = os.path.join(ASSETS, '07_shap_beeswarm_classweights.png')
         if os.path.exists(img_path):
             st.image(img_path, use_container_width=True)
         else:
-            st.info("📊 Visualization not available. Please add '06_shap_classweights.png' to the assets folder.")
+            st.info("Visualization not available.")
         st.caption("Note how the ranking of top features can differ between methods — this is what SRA measures.")
 
     st.markdown("---")
@@ -516,47 +472,47 @@ with tab3:
                     st.pyplot(fig, use_container_width=True)
                     plt.close()
             except Exception as e:
-                st.warning(f"⚠️ Could not compute SHAP for {shap_method}: {str(e)}")
+                st.warning(f"Could not compute SHAP for {shap_method}: {str(e)}")
     else:
-        st.info("ℹ️ Please ensure the model is loaded and X_explain data is available.")
+        st.info("Please ensure the model is loaded and X_explain data is available.")
 
     st.markdown("---")
     st.markdown("#### Feature Ranking Comparison Across All Methods")
-    img_path = os.path.join(ASSETS, '07_feature_rankings.png')
+    img_path = os.path.join(ASSETS, '09_sra_final_comparison.png')
     if os.path.exists(img_path):
         st.image(img_path, use_container_width=True)
     else:
-        st.info("📊 Visualization not available. Please add '07_feature_rankings.png' to the assets folder.")
+        st.info("Visualization not available.")
     st.caption("Lower rank = more important. Notice how the same feature can be ranked differently depending on which imbalance method was used.")
 
 # ════════════════════════════════════════════════════════════════════════════════
 # TAB 4 — Compare Methods
 # ════════════════════════════════════════════════════════════════════════════════
 with tab4:
-    st.subheader("⚖️ Imbalance Method Comparison")
+    st.subheader("Imbalance Method Comparison")
 
     st.markdown("#### Model Performance (ROC-AUC & F1 Score)")
-    img_path = os.path.join(ASSETS, '04_model_comparison.png')
+    img_path = os.path.join(ASSETS, '05_model_comparison.png')
     if os.path.exists(img_path):
         st.image(img_path, use_container_width=True)
     else:
-        st.info("📊 Visualization not available. Please add '04_model_comparison.png' to the assets folder.")
+        st.info("Visualization not available.")
 
     st.markdown("#### Full Results Table")
     if not results_df.empty:
         display_df = results_df.copy()
         st.dataframe(display_df, use_container_width=True, hide_index=True)
     else:
-        st.info("ℹ️ Results data not available.")
+        st.info("Results data not available.")
 
     st.markdown("---")
     st.markdown("#### Method Descriptions")
     method_info = {
         'SMOTE': ('Oversampling', 'Creates synthetic minority samples between real ones using k-nearest neighbours.'),
         'ADASYN': ('Adaptive Oversampling', 'Like SMOTE but focuses on harder-to-classify regions near the decision boundary.'),
-        'Borderline-SMOTE': ('Targeted Oversampling', 'Only generates synthetic samples near the class boundary — more precise than SMOTE.'),
-        'Class Weights': ('Cost-Sensitive', 'No resampling. Penalises misclassifying minority class more during training.'),
-        'Threshold Moving': ('Post-processing', 'Trains on original data, then finds optimal decision threshold by maximising F1.'),
+        'Borderline-SMOTE': ('Targeted Oversampling', 'Only generates synthetic samples near the class boundary.'),
+        'Class Weights': ('Cost-Sensitive', 'Penalises misclassifying minority class more during training.'),
+        'Threshold Moving': ('Post-processing', 'Finds optimal decision threshold by maximising F1.'),
     }
     cols = st.columns(len(method_info))
     for col, (name, (mtype, desc)) in zip(cols, method_info.items()):
@@ -571,38 +527,53 @@ with tab4:
             </div>""", unsafe_allow_html=True)
 
 # ════════════════════════════════════════════════════════════════════════════════
-# TAB 5 — SRA Research Results
+# TAB 5 — SRA Research Results (FIXED - Directly loads sra_results_final.csv)
 # ════════════════════════════════════════════════════════════════════════════════
 with tab5:
-    st.subheader("🔬 SRA Research Results")
+    st.subheader("SRA Research Results")
     st.markdown("""
     **Spearman Rank Agreement (SRA)** measures how stable SHAP feature rankings are across 30 bootstrap samples.
     An SRA close to 1.0 means the same features are always ranked the same way → trustworthy explanations.
     """)
 
-    # SRA overview chart
-    img_path = os.path.join(ASSETS, '08_sra_results.png')
+    img_path = os.path.join(ASSETS, '09_sra_final_comparison.png')
     if os.path.exists(img_path):
         st.image(img_path, use_container_width=True)
     else:
-        st.info("📊 Visualization not available. Please add '08_sra_results.png' to the assets folder.")
+        st.info("Visualization not available.")
 
     st.markdown("---")
     st.markdown("#### SRA Scores — Detailed Table")
-    if not results_df.empty and not sra_df.empty:
+    
+    # Load the final SRA results directly from sra_results_final.csv
+    sra_final_path = os.path.join(ASSETS, 'sra_results_final.csv')
+    
+    if os.path.exists(sra_final_path):
         try:
-            final_merged = pd.merge(results_df, sra_df, on='method').sort_values('sra', ascending=False)
-            st.dataframe(final_merged, use_container_width=True, hide_index=True)
+            sra_final_df = pd.read_csv(sra_final_path)
+            
+            # Display the table
+            st.dataframe(sra_final_df, use_container_width=True, hide_index=True)
+            
+            # Store for later use
+            final_merged = sra_final_df
+            has_sra_data = True
+            
+            # Get best methods
+            best_sra_m = sra_final_df.loc[sra_final_df['sra'].idxmax(), 'method']
+            best_f1_m = sra_final_df.loc[sra_final_df['f1'].idxmax(), 'method']
+            
         except Exception as e:
-            st.error(f"Error merging data: {str(e)}")
+            st.error(f"Error loading SRA data: {str(e)}")
+            has_sra_data = False
     else:
-        st.info("ℹ️ SRA results data not available.")
+        st.info("SRA results data not available. Please run the notebook to generate sra_results_final.csv")
+        has_sra_data = False
 
     st.markdown("---")
     st.markdown("#### SRA Interpretation")
     sra_cols = st.columns(4)
     
-    # SRA interpretation cards
     interpretation_data = [
         ("Excellent", "0.90 – 1.00", "#059669", "#D1FAE5"),
         ("Good", "0.75 – 0.89", "#D97706", "#FEF3C7"),
@@ -619,19 +590,20 @@ with tab5:
 
     st.markdown("---")
     
-    # Research Findings - only if data is available
-    if not results_df.empty and not sra_df.empty:
+    # Research Findings - Using the loaded data
+    if has_sra_data and 'final_merged' in locals() and not final_merged.empty:
         try:
-            final_merged = pd.merge(results_df, sra_df, on='method').sort_values('sra', ascending=False)
-            best_sra_m = final_merged.iloc[0]['method']
-            best_f1_m = final_merged.sort_values('f1', ascending=False).iloc[0]['method']
+            best_sra_m = final_merged.loc[final_merged['sra'].idxmax(), 'method']
+            best_f1_m = final_merged.loc[final_merged['f1'].idxmax(), 'method']
 
-            # H1 Finding
-            st.markdown("#### 📌 Research Findings")
+            st.markdown("#### Research Findings")
             
             # Get SRA values for comparison
-            adasyn_sra = final_merged[final_merged['method'] == 'ADASYN']['sra'].values[0] if 'ADASYN' in final_merged['method'].values else 0.0
-            classweights_sra = final_merged[final_merged['method'] == 'Class Weights']['sra'].values[0] if 'Class Weights' in final_merged['method'].values else 0.0
+            adasyn_row = final_merged[final_merged['method'] == 'ADASYN']
+            classweights_row = final_merged[final_merged['method'] == 'Class Weights']
+            
+            adasyn_sra = adasyn_row['sra'].values[0] if not adasyn_row.empty else 0.0
+            classweights_sra = classweights_row['sra'].values[0] if not classweights_row.empty else 0.0
             
             st.markdown(f"""<div class="finding-box">
             <h4 style="color:#1E2761;margin-top:0">H1 — Oversampling vs Non-Oversampling Stability</h4>
@@ -639,37 +611,34 @@ with tab5:
             than non-oversampling methods (Class Weights, Threshold Moving)
             ({classweights_sra:.4f}).</p>
             <p>This is <b>contrary to H1</b> — synthetic oversampling actually produced <i>more</i> stable feature rankings 
-            on this dataset. This is an interesting finding worth discussing in the report.</p>
+            on this dataset.</p>
             </div>""", unsafe_allow_html=True)
 
             st.markdown("")
             
-            # H2 Finding - Trade-off
-            trade_off_text = (
-                f"✅ <b>H2 SUPPORTED</b> — The best F1 method (<b>{best_f1_m}</b>) is NOT the same as the best SRA method (<b>{best_sra_m}</b>). "
-                f"There is a trade-off: use {best_f1_m} for maximum prediction performance, use {best_sra_m} for maximum explanation stability."
-                if stats.get('trade_off', False) else
-                f"❌ <b>H2 NOT SUPPORTED</b> — The same method ({best_f1_m}) wins on both F1 and SRA."
-            )
+            # Check if best F1 and best SRA are different
+            if best_f1_m != best_sra_m:
+                trade_off_text = f"✅ <b>H2 SUPPORTED</b> — The best F1 method (<b>{best_f1_m}</b>) is NOT the same as the best SRA method (<b>{best_sra_m}</b>). There is a trade-off!"
+            else:
+                trade_off_text = f"❌ <b>H2 NOT SUPPORTED</b> — The same method ({best_f1_m}) wins on both F1 and SRA."
 
             st.markdown(f"""<div class="finding-box">
             <h4 style="color:#1E2761;margin-top:0">H2 — Performance vs Stability Trade-off</h4>
             <p>{trade_off_text}</p>
             <p><b>Practical recommendation:</b></p>
             <ul>
-            <li>Banks prioritising <b>regulatory explainability</b> → use <b>{best_sra_m}</b></li>
-            <li>Banks prioritising <b>prediction accuracy</b> → use <b>{best_f1_m}</b></li>
+            <li>Best for <b>prediction performance</b> → <b>{best_f1_m}</b></li>
+            <li>Best for <b>explanation stability</b> → <b>{best_sra_m}</b></li>
             </ul>
             </div>""", unsafe_allow_html=True)
 
             st.markdown("---")
             
-            # Interactive SRA Comparison
             st.markdown("#### Interactive SRA Comparison")
             selected_methods = st.multiselect(
                 "Select methods to compare:",
-                AVAILABLE_MODELS if AVAILABLE_MODELS else list(METHOD_COLORS.keys()),
-                default=AVAILABLE_MODELS if AVAILABLE_MODELS else list(METHOD_COLORS.keys())[:3]
+                final_merged['method'].tolist(),
+                default=final_merged['method'].tolist()
             )
 
             if selected_methods:
@@ -680,11 +649,10 @@ with tab5:
                         fig, ax = plt.subplots(figsize=(9, 4))
                         bar_colors = [METHOD_COLORS.get(m, '#1E2761') for m in sub_df['method']]
                         
-                        # Create bar chart with error bars
                         bars = ax.bar(
                             sub_df['method'], 
                             sub_df['sra'],
-                            yerr=sub_df['sra_std'], 
+                            yerr=sub_df.get('sra_std', [0]*len(sub_df)), 
                             color=bar_colors,
                             edgecolor='white', 
                             capsize=8, 
@@ -692,19 +660,19 @@ with tab5:
                             width=0.5
                         )
                         
-                        ax.set_ylim(0.90, 1.005)
+                        ax.set_ylim(0.95, 1.005)
                         ax.set_ylabel('SRA Score', fontsize=12)
                         ax.set_title('SRA Score by Method (with ±1 Std Dev)', fontweight='bold', fontsize=13)
                         
-                        # Add value labels on bars
                         for bar, val in zip(bars, sub_df['sra']):
                             ax.text(
                                 bar.get_x() + bar.get_width() / 2, 
-                                val + 0.0008,
+                                val - 0.003,
                                 f'{val:.4f}', 
                                 ha='center', 
                                 fontsize=11, 
-                                fontweight='bold'
+                                fontweight='bold',
+                                color='white'
                             )
                         
                         plt.xticks(rotation=15)
@@ -713,11 +681,11 @@ with tab5:
                         plt.close()
                     else:
                         st.warning("No data available for selected methods.")
-                        
+                            
                 except Exception as e:
                     st.error(f"Error creating SRA comparison chart: {str(e)}")
                     
         except Exception as e:
             st.error(f"Error in SRA analysis: {str(e)}")
     else:
-        st.info("ℹ️ Complete SRA results not available. Please check data files.")
+        st.info("Complete SRA results not available. Please run the notebook to generate the data.")
