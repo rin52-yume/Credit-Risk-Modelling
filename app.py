@@ -102,7 +102,7 @@ with st.sidebar:
     if stats['trade_off']:
         st.warning("⚖️ **Trade-off confirmed!** Best prediction ≠ best stability")
     st.divider()
-    st.caption("B.Sc. Economics · Major Project 2025–26")
+    st.caption("st.caption("M.A. Economics · Delhi School of Economics · Class of 2027")
 
 # ── Main title ────────────────────────────────────────────────────────────────
 st.markdown("# 🏦 Explainable AI Credit Risk Assessment System")
@@ -435,12 +435,7 @@ with tab5:
     st.markdown("---")
     st.markdown("#### SRA Scores — Detailed Table")
     final_merged = pd.merge(results_df, sra_df, on='method').sort_values('sra', ascending=False)
-    final_merged['f1']      = final_merged['f1'].round(4)
-    final_merged['roc_auc'] = final_merged['roc_auc'].round(4)
-    final_merged['sra']     = final_merged['sra'].round(4)
-    final_merged['sra_std'] = final_merged['sra_std'].round(4)
-    st.dataframe(final_merged[['method','f1','roc_auc','sra','sra_std']],
-                 use_container_width=True, hide_index=True)
+st.dataframe(final_merged, use_container_width=True, hide_index=True)
 
     st.markdown("---")
     st.markdown("#### SRA Interpretation")
@@ -514,3 +509,5 @@ with tab5:
         plt.tight_layout()
         st.pyplot(fig, use_container_width=True)
         plt.close()
+
+        
