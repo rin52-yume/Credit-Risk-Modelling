@@ -102,8 +102,7 @@ with st.sidebar:
     if stats['trade_off']:
         st.warning("⚖️ **Trade-off confirmed!** Best prediction ≠ best stability")
     st.divider()
-    st.caption("st.caption("M.A. Economics · Delhi School of Economics · Class of 2027")
-
+    st.caption("M.A. Economics · Delhi School of Economics · Class of 2027")
 # ── Main title ────────────────────────────────────────────────────────────────
 st.markdown("# 🏦 Explainable AI Credit Risk Assessment System")
 st.markdown("**Research:** Which imbalance correction method produces the most stable SHAP feature rankings? (SRA metric)")
@@ -391,11 +390,11 @@ with tab4:
         st.image(os.path.join(ASSETS,'04_model_comparison.png'), use_container_width=True)
 
     st.markdown("#### Full Results Table")
-    display_df = results_df.copy()
-    display_df['roc_auc'] = display_df['roc_auc'].round(4)
-    display_df['f1']      = display_df['f1'].round(4)
-    #display_df['threshold'] = display_df['threshold'].round(3)
-    st.dataframe(display_df.sort_values('f1', ascending=False), use_container_width=True, hide_index=True)
+display_df = results_df.copy()
+# display_df['roc_auc'] = display_df['roc_auc'].round(4)
+# display_df['f1']      = display_df['f1'].round(4)
+# display_df['threshold'] = display_df['threshold'].round(3)
+st.dataframe(display_df, use_container_width=True, hide_index=True)
 
     st.markdown("---")
     st.markdown("#### Method Descriptions")
@@ -510,4 +509,3 @@ st.dataframe(final_merged, use_container_width=True, hide_index=True)
         st.pyplot(fig, use_container_width=True)
         plt.close()
 
-        
