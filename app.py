@@ -185,118 +185,118 @@ with tab1:
 # ════════════════════════════════════════════════════════════════════════════════
 # TAB 2 — Predict Default
 # ════════════════════════════════════════════════════════════════════════════════
-with tab2:
-    st.subheader("🔮 Credit Default Prediction")
-    st.markdown("Enter a client's details below to predict their probability of default.")
+    with tab2:
+        st.subheader("🔮 Credit Default Prediction")
+        st.markdown("Enter a client's details below to predict their probability of default.")
 
-    selected_method = st.selectbox(
-        "Select Imbalance Correction Model:",
-        list(models.keys()),
-        index=4,
-        help="Choose which trained model to use for prediction"
-    )
-
-    st.markdown("---")
-    st.markdown("#### Client Information")
-
-    col_a, col_b, col_c = st.columns(3)
-
-    with col_a:
-        st.markdown("**👤 Demographics**")
-        limit_bal = st.slider("Credit Limit (NT$)", 10000, 1000000, 50000, step=10000,
-                              help="Maximum credit amount approved")
-        age = st.slider("Age", 18, 80, 35)
-        sex = st.selectbox("Sex", [1, 2], format_func=lambda x: "Male" if x==1 else "Female")
-        education = st.selectbox("Education",
-            [1,2,3,4], format_func=lambda x: {1:"Graduate school",2:"University",3:"High school",4:"Others"}[x])
-        marriage = st.selectbox("Marital Status",
-            [1,2,3], format_func=lambda x: {1:"Married",2:"Single",3:"Others"}[x])
-
-    with col_b:
-        st.markdown("**💳 Payment History (Recent → Oldest)**")
-        pay0 = st.selectbox("PAY_0 (Sep)", list(range(-2, 10)),
-            format_func=lambda x: f"{x} ({'on-time' if x<=0 else f'{x}mo late'})", index=2)
-        pay2 = st.selectbox("PAY_2 (Aug)", list(range(-2, 10)),
-            format_func=lambda x: f"{x} ({'on-time' if x<=0 else f'{x}mo late'})", index=2)
-        pay3 = st.selectbox("PAY_3 (Jul)", list(range(-2, 10)),
-            format_func=lambda x: f"{x} ({'on-time' if x<=0 else f'{x}mo late'})", index=2)
-        pay4 = st.selectbox("PAY_4 (Jun)", list(range(-2, 10)),
-            format_func=lambda x: f"{x} ({'on-time' if x<=0 else f'{x}mo late'})", index=2)
-        pay5 = st.selectbox("PAY_5 (May)", list(range(-2, 10)),
-            format_func=lambda x: f"{x} ({'on-time' if x<=0 else f'{x}mo late'})", index=2)
-        pay6 = st.selectbox("PAY_6 (Apr)", list(range(-2, 10)),
-            format_func=lambda x: f"{x} ({'on-time' if x<=0 else f'{x}mo late'})", index=2)
-
-    with col_c:
-        st.markdown("**📄 Bill & Payment Amounts (NT$)**")
-        bill1 = st.number_input("Bill Sep", 0, 500000, 20000, step=1000)
-        bill2 = st.number_input("Bill Aug", 0, 500000, 18000, step=1000)
-        bill3 = st.number_input("Bill Jul", 0, 500000, 17000, step=1000)
-        pay_a1 = st.number_input("Paid Sep", 0, 200000, 1500, step=500)
-        pay_a2 = st.number_input("Paid Aug", 0, 200000, 1500, step=500)
-        pay_a3 = st.number_input("Paid Jul", 0, 200000, 1500, step=500)
-
-    st.markdown("---")
-    predict_btn = st.button("🔍 Predict Default Probability", type="primary", use_container_width=True)
-
-    if predict_btn:
-        # Build full feature vector
-        bill4 = bill3; bill5 = bill2; bill6 = bill1
-        pay_a4 = pay_a3; pay_a5 = pay_a2; pay_a6 = pay_a1
-
-        raw = {
-            'LIMIT_BAL': limit_bal, 'SEX': sex, 'EDUCATION': education,
-            'MARRIAGE': marriage, 'AGE': age,
-            'PAY_0': pay0, 'PAY_2': pay2, 'PAY_3': pay3,
-            'PAY_4': pay4, 'PAY_5': pay5, 'PAY_6': pay6,
-            'BILL_AMT1': bill1,'BILL_AMT2': bill2,'BILL_AMT3': bill3,
-            'BILL_AMT4': bill4,'BILL_AMT5': bill5,'BILL_AMT6': bill6,
-            'PAY_AMT1': pay_a1,'PAY_AMT2': pay_a2,'PAY_AMT3': pay_a3,
-            'PAY_AMT4': pay_a4,'PAY_AMT5': pay_a5,'PAY_AMT6': pay_a6,
-        }
-        pay_cols = [raw[f'PAY_{k}'] for k in [0,2,3,4,5,6]]
-        total_bill = sum([raw[f'BILL_AMT{i}'] for i in range(1,7)])
-        total_paid = sum([raw[f'PAY_AMT{i}'] for i in range(1,7)])
-        raw['AVG_PAY_DELAY'] = np.mean(pay_cols)
-        raw['TOTAL_BILL']    = total_bill
-        raw['TOTAL_PAID']    = total_paid
-        raw['UTIL_RATIO']    = bill1 / (limit_bal + 1)
-        raw['PAY_RATIO']     = total_paid / (total_bill + 1)
-
-        row_df = pd.DataFrame([raw])[feature_names]
-        row_sc = pd.DataFrame(scaler.transform(row_df), columns=feature_names)
-
-        model  = models[selected_method]
-        thresh = thresholds[selected_method]
-        proba  = model.predict_proba(row_sc)[0, 1]
-        pred   = int(proba >= thresh)
+        selected_method = st.selectbox(
+            "Select Imbalance Correction Model:",
+            list(models.keys()),
+            index=4,
+            help="Choose which trained model to use for prediction"
+        )
 
         st.markdown("---")
-        st.markdown("### Prediction Result")
+        st.markdown("#### Client Information")
 
-        r1, r2, r3 = st.columns([1, 1, 1])
-        with r1:
-            st.markdown(f"""<div class="metric-card">
-                <div class="metric-label">Default Probability</div>
-                <div class="metric-value" style="color:{'#DC2626' if proba>0.5 else '#059669'}">{proba*100:.1f}%</div>
-            </div>""", unsafe_allow_html=True)
-        with r2:
-            st.markdown(f"""<div class="metric-card">
-                <div class="metric-label">Decision Threshold</div>
-                <div class="metric-value">{thresh:.3f}</div>
-            </div>""", unsafe_allow_html=True)
-        with r3:
-            st.markdown(f"""<div class="metric-card">
-                <div class="metric-label">Model Used</div>
-                <div class="metric-value" style="font-size:16px">{selected_method}</div>
-            </div>""", unsafe_allow_html=True)
+        col_a, col_b, col_c = st.columns(3)
 
-        if proba >= 0.65:
-            st.markdown(f'<div class="risk-high">🔴 <b>HIGH RISK</b> — Probability: {proba*100:.1f}%. Recommend rejecting credit application or requesting additional collateral.</div>', unsafe_allow_html=True)
-        elif proba >= 0.35:
-            st.markdown(f'<div class="risk-medium">🟡 <b>MEDIUM RISK</b> — Probability: {proba*100:.1f}%. Further review recommended before approving.</div>', unsafe_allow_html=True)
-        else:
-            st.markdown(f'<div class="risk-low">🟢 <b>LOW RISK</b> — Probability: {proba*100:.1f}%. Credit application looks acceptable.</div>', unsafe_allow_html=True)
+        with col_a:
+            st.markdown("**👤 Demographics**")
+            limit_bal = st.slider("Credit Limit (NT$)", 10000, 1000000, 50000, step=10000,
+                                help="Maximum credit amount approved")
+            age = st.slider("Age", 18, 80, 35)
+            sex = st.selectbox("Sex", [1, 2], format_func=lambda x: "Male" if x==1 else "Female")
+            education = st.selectbox("Education",
+                [1,2,3,4], format_func=lambda x: {1:"Graduate school",2:"University",3:"High school",4:"Others"}[x])
+            marriage = st.selectbox("Marital Status",
+                [1,2,3], format_func=lambda x: {1:"Married",2:"Single",3:"Others"}[x])
+
+        with col_b:
+            st.markdown("**💳 Payment History (Recent → Oldest)**")
+            pay0 = st.selectbox("PAY_0 (Sep)", list(range(-2, 10)),
+                format_func=lambda x: f"{x} ({'on-time' if x<=0 else f'{x}mo late'})", index=2)
+            pay2 = st.selectbox("PAY_2 (Aug)", list(range(-2, 10)),
+                format_func=lambda x: f"{x} ({'on-time' if x<=0 else f'{x}mo late'})", index=2)
+            pay3 = st.selectbox("PAY_3 (Jul)", list(range(-2, 10)),
+                format_func=lambda x: f"{x} ({'on-time' if x<=0 else f'{x}mo late'})", index=2)
+            pay4 = st.selectbox("PAY_4 (Jun)", list(range(-2, 10)),
+                format_func=lambda x: f"{x} ({'on-time' if x<=0 else f'{x}mo late'})", index=2)
+            pay5 = st.selectbox("PAY_5 (May)", list(range(-2, 10)),
+                format_func=lambda x: f"{x} ({'on-time' if x<=0 else f'{x}mo late'})", index=2)
+            pay6 = st.selectbox("PAY_6 (Apr)", list(range(-2, 10)),
+                format_func=lambda x: f"{x} ({'on-time' if x<=0 else f'{x}mo late'})", index=2)
+
+        with col_c:
+            st.markdown("**📄 Bill & Payment Amounts (NT$)**")
+            bill1 = st.number_input("Bill Sep", 0, 500000, 20000, step=1000)
+            bill2 = st.number_input("Bill Aug", 0, 500000, 18000, step=1000)
+            bill3 = st.number_input("Bill Jul", 0, 500000, 17000, step=1000)
+            pay_a1 = st.number_input("Paid Sep", 0, 200000, 1500, step=500)
+            pay_a2 = st.number_input("Paid Aug", 0, 200000, 1500, step=500)
+            pay_a3 = st.number_input("Paid Jul", 0, 200000, 1500, step=500)
+
+        st.markdown("---")
+        predict_btn = st.button("🔍 Predict Default Probability", type="primary", use_container_width=True)
+
+        if predict_btn:
+            # Build full feature vector
+            bill4 = bill3; bill5 = bill2; bill6 = bill1
+            pay_a4 = pay_a3; pay_a5 = pay_a2; pay_a6 = pay_a1
+
+            raw = {
+                'LIMIT_BAL': limit_bal, 'SEX': sex, 'EDUCATION': education,
+                'MARRIAGE': marriage, 'AGE': age,
+                'PAY_0': pay0, 'PAY_2': pay2, 'PAY_3': pay3,
+                'PAY_4': pay4, 'PAY_5': pay5, 'PAY_6': pay6,
+                'BILL_AMT1': bill1,'BILL_AMT2': bill2,'BILL_AMT3': bill3,
+                'BILL_AMT4': bill4,'BILL_AMT5': bill5,'BILL_AMT6': bill6,
+                'PAY_AMT1': pay_a1,'PAY_AMT2': pay_a2,'PAY_AMT3': pay_a3,
+                'PAY_AMT4': pay_a4,'PAY_AMT5': pay_a5,'PAY_AMT6': pay_a6,
+            }
+            pay_cols = [raw[f'PAY_{k}'] for k in [0,2,3,4,5,6]]
+            total_bill = sum([raw[f'BILL_AMT{i}'] for i in range(1,7)])
+            total_paid = sum([raw[f'PAY_AMT{i}'] for i in range(1,7)])
+            raw['AVG_PAY_DELAY'] = np.mean(pay_cols)
+            raw['TOTAL_BILL']    = total_bill
+            raw['TOTAL_PAID']    = total_paid
+            raw['UTIL_RATIO']    = bill1 / (limit_bal + 1)
+            raw['PAY_RATIO']     = total_paid / (total_bill + 1)
+
+            row_df = pd.DataFrame([raw])[feature_names]
+            row_sc = pd.DataFrame(scaler.transform(row_df), columns=feature_names)
+
+            model  = models[selected_method]
+            thresh = thresholds[selected_method]
+            proba  = model.predict_proba(row_sc)[0, 1]
+            pred   = int(proba >= thresh)
+
+            st.markdown("---")
+            st.markdown("### Prediction Result")
+
+            r1, r2, r3 = st.columns([1, 1, 1])
+            with r1:
+                st.markdown(f"""<div class="metric-card">
+                    <div class="metric-label">Default Probability</div>
+                    <div class="metric-value" style="color:{'#DC2626' if proba>0.5 else '#059669'}">{proba*100:.1f}%</div>
+                </div>""", unsafe_allow_html=True)
+            with r2:
+                st.markdown(f"""<div class="metric-card">
+                    <div class="metric-label">Decision Threshold</div>
+                    <div class="metric-value">{thresh:.3f}</div>
+                </div>""", unsafe_allow_html=True)
+            with r3:
+                st.markdown(f"""<div class="metric-card">
+                    <div class="metric-label">Model Used</div>
+                    <div class="metric-value" style="font-size:16px">{selected_method}</div>
+                </div>""", unsafe_allow_html=True)
+
+            if proba >= 0.65:
+                st.markdown(f'<div class="risk-high">🔴 <b>HIGH RISK</b> — Probability: {proba*100:.1f}%. Recommend rejecting credit application or requesting additional collateral.</div>', unsafe_allow_html=True)
+            elif proba >= 0.35:
+                st.markdown(f'<div class="risk-medium">🟡 <b>MEDIUM RISK</b> — Probability: {proba*100:.1f}%. Further review recommended before approving.</div>', unsafe_allow_html=True)
+            else:
+                st.markdown(f'<div class="risk-low">🟢 <b>LOW RISK</b> — Probability: {proba*100:.1f}%. Credit application looks acceptable.</div>', unsafe_allow_html=True)
 
         # Gauge chart
         fig, ax = plt.subplots(figsize=(5, 2.5))
