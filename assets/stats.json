@@ -1,0 +1,1 @@
+{"n_samples": 29965, "default_rate": 22.1, "n_features": 28, "best_sra_method": "SMOTE", "best_f1_method": "Threshold Moving", "trade_off": true}
